@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Human Counter</title>
+    <style>
+        .upload-container {
+            background-color: #d3d3d3; /* Grey background */
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-around; /* Space between form and button */
+            align-items: center; /* Vertically center */
+            width: 80%;
+            margin: 20px auto; /* Centering the div */
+        }
+
+        .upload-btn-wrapper {
+            background-color: #4CAF50; /* Green background */
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .webcam-btn {
+            background-color: #4CAF50; /* Green background */
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .file-input {
+            display: none; /* Hide the default file input */
+        }
+
+        .custom-file-label {
+            border: 1px solid whitesmoke;
+            display: inline-block;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+
+        #video-container {
+            width: 80%;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            padding: 15px;
+        }
+
+        #bg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .status-message {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            padding: 10px;
+            border-radius: 5px;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .success {
+            color: #155724; /* Dark green */
+            background-color: #d4edda; /* Light green */
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            color: #721c24; /* Dark red */
+            background-color: #f8d7da; /* Light red */
+            border: 1px solid #f5c6cb;
+        }
+
+        .webcam-btn-active {
+        background-color: #dc3545; /* Red background */
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <form id="upload-form" enctype="multipart/form-data">
+            <label class="custom-file-label" for="file-input">Choose file</label>
+            <input id="file-input" class="file-input" type="file" name="file">
+            <button type="button" onclick="uploadFile()" class="upload-btn-wrapper">Upload</button>
+        </form>
+
+        <button id="turn-off-webcam-btn" onclick="openWebcam()" class="webcam-btn">Live Webcam</button>
+
+    </div>
+
+    <div id="upload-status"></div>
+    <div id="message-container" class="status-message"></div>
+
+    <!-- <img style="width: 100%; height: 100%;" id="bg" src="{{url_for('video_feed')}}"> -->
+    <div id="video-container">
+        <img id="bg" src="{{url_for('video_feed')}}">
+    </div>
+    <script>
+                // Update the label text with the selected file name
+        document.getElementById('file-input').onchange = function () {
+        document.querySelector('.custom-file-label').textContent = this.files[0].name;
+        };
+
+        function loadVideoFeed() {
+            var videoFeed = document.getElementById('bg');
+            videoFeed.src = "{{ url_for('video_feed') }}?" + new Date().getTime();
+        }
+
+
+        function openWebcam() {
+            var webcamBtn = document.getElementById('turn-off-webcam-btn');
+            var videoFeed = document.getElementById('bg');
+
+            if (webcamBtn.innerHTML === 'Live Webcam') {
+                videoFeed.src = "{{ url_for('use_webcam') }}?" + new Date().getTime();
+                webcamBtn.innerHTML = 'Turn Off Webcam';
+                webcamBtn.classList.add('webcam-btn-active');
+            } else {
+                videoFeed.src = ''; // Turn off the webcam
+                webcamBtn.innerHTML = 'Live Webcam';
+                webcamBtn.classList.remove('webcam-btn-active');
+            }
+        }
+
+
+
+        
+        function showMessage(message, isError = false) {
+            var messageDiv = document.getElementById('message-container');
+            messageDiv.innerHTML = message;
+            messageDiv.className = isError ? 'status-message error' : 'status-message success';
+
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+                messageDiv.className = '';
+            }, 2000);
+        }
+
+        function uploadFile() {
+            var formData = new FormData();
+            var fileInput = document.getElementById('file-input');
+
+            if (fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+
+                fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => { throw new Error(text || 'Response not OK') });
+                        }
+                        return response.json();
+                    })
+                    .then(result => {
+                        showMessage(result.message);
+                        if (result.message.includes('uploaded successfully')) {
+                            loadVideoFeed();
+                        }
+                    })
+                    .catch(error => {
+                        showMessage('Upload failed: ' + error.message, true);
+                    });
+
+            } else {
+                showMessage('Please select a file first.', true);
+            }
+        }
+    </script>
+</body>
+</html>
